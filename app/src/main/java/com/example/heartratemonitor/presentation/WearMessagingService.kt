@@ -15,7 +15,14 @@ class WearMessagingService(private val context: Context) {
     private val scope = CoroutineScope(Dispatchers.IO)
 
     companion object {
-        const val HEART_RATE_CAPABILITY = "heart_rate_capability" // ← Nombre simplificado
+        const val HEART_RATE_CAPABILITY = "heart_rate_capability"
+    }
+
+    // Método para enviar frecuencia cardíaca (llama al suspend)
+    fun sendHeartRate(heartRate: Float) {
+        scope.launch {
+            sendHeartRateToPhone(heartRate)
+        }
     }
 
     suspend fun sendHeartRateToPhone(heartRate: Float) {
@@ -50,5 +57,16 @@ class WearMessagingService(private val context: Context) {
         }
     }
 
-    // ... resto del código igual ...
+    // Método suspend para verificar conectividad
+    suspend fun isPhoneConnected(): Boolean {
+        return try {
+            val capabilities = capabilityClient
+                .getCapability(HEART_RATE_CAPABILITY, CapabilityClient.FILTER_REACHABLE)
+                .await()
+            capabilities.nodes.isNotEmpty()
+        } catch (e: Exception) {
+            Log.e("WEAR_COMM", "❌ Error verificando conectividad: ${e.message}")
+            false
+        }
+    }
 }

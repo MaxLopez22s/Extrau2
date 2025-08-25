@@ -45,8 +45,7 @@ import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.PermissionState
 import com.google.accompanist.permissions.PermissionStatus
 import com.google.accompanist.permissions.rememberPermissionState
-import com.google.accompanist.permissions.shouldShowRationale
-import kotlinx.coroutines.delay // ✅ Import agregado
+import kotlinx.coroutines.delay
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -97,7 +96,7 @@ fun SensorMainScreen() {
         while (true) {
             isPhoneConnected = messagingService.isPhoneConnected()
             connectionStatus = if (isPhoneConnected) "Conectado" else "Desconectado"
-            delay(5000) // ✅ Ahora funciona con el import
+            delay(5000)
         }
     }
 
@@ -140,7 +139,7 @@ fun SensorMainScreen() {
         }
     }
 
-    // ✅ UI fuera del DisposableEffect
+    // UI
     HeartRateScreen(
         heartRate = heartRate,
         status = "$sensorStatus | $connectionStatus",
@@ -288,7 +287,7 @@ fun PermissionScreen(permissionState: PermissionState) {
     }
 }
 
-// Vistas previas (sin cambios)
+// Vistas previas
 @Preview(device = Devices.WEAR_OS_SQUARE, showSystemUi = true)
 @Composable
 fun HeartRatePreview() {

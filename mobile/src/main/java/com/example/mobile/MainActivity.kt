@@ -1,6 +1,7 @@
 package com.example.mobile
 
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Arrangement
@@ -49,8 +50,9 @@ fun HeartRateApp(capabilitySetup: CapabilitySetup) {
     // Verificar conexión periódicamente
     LaunchedEffect(Unit) {
         while (true) {
-            val isConnected = capabilitySetup.checkConnection()
-            connectionStatus.value = if (isConnected) "✅ Conectado al reloj" else "❌ Desconectado"
+            capabilitySetup.checkConnection { isConnected ->
+                connectionStatus.value = if (isConnected) "✅ Conectado al reloj" else "❌ Desconectado"
+            }
             delay(3000)
         }
     }
@@ -74,8 +76,6 @@ fun HeartRateApp(capabilitySetup: CapabilitySetup) {
         Text(
             text = connectionStatus.value,
             fontSize = 16.sp,
-            color = if (connectionStatus.value.contains("✅")) MaterialTheme.colorScheme.primary
-            else MaterialTheme.colorScheme.error,
             textAlign = TextAlign.Center,
             modifier = Modifier.padding(bottom = 16.dp)
         )
@@ -84,7 +84,6 @@ fun HeartRateApp(capabilitySetup: CapabilitySetup) {
             Text(
                 text = "${heartRate.value.toInt()} BPM",
                 fontSize = 32.sp,
-                color = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.padding(vertical = 16.dp)
             )
             Text(
