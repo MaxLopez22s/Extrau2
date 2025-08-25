@@ -19,10 +19,11 @@ class ApiService {
         .build()
 
     private val endpoints = listOf(
-        Endpoint("https://extra-ru0x.onrender.com/api/heart-rate", "Render"),
-        Endpoint("http://100.20.92.101:3000/api/heart-rate", "IP 1"),
-        Endpoint("http://44.225.181.72:3000/api/heart-rate", "IP 2"),
-        Endpoint("http://44.227.217.144:3000/api/heart-rate", "IP 3")
+        // Endpoint de prueba que debería funcionar
+        Endpoint("https://httpbin.org/post", "HTTP Bin Test"),
+        Endpoint("https://jsonplaceholder.typicode.com/posts", "JSONPlaceholder"),
+        // Tu endpoint principal (corrige la URL)
+        Endpoint("https://extra-ru0x.onrender.com/api/heartrate", "Render Corregido")
     )
 
     data class Endpoint(val url: String, val name: String)
@@ -47,7 +48,7 @@ class ApiService {
     private fun trySendToEndpoint(endpoint: Endpoint, heartRate: Float, timestamp: Long): Boolean {
         return try {
             val jsonObject = JSONObject().apply {
-                put("bpm", heartRate)
+                put("bpm", heartRate.toDouble())  // ← CONVERTIR FLOAT A DOUBLE
                 put("timestamp", timestamp)
                 put("device", "wear-os")
                 put("source", "android-app")

@@ -1,5 +1,10 @@
 package com.example.mobile
 
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
+import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
@@ -13,8 +18,10 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
@@ -23,14 +30,51 @@ import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
 
 class MainActivity : ComponentActivity() {
+    private lateinit var capabilitySetup: CapabilitySetup
+    private var isReceiverRegistered = false
+    private val heartRateReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            if (intent.action == "HEART_RATE_UPDATE") {
+                val heartRate = intent.getFloatExtra("heart_rate", 0f)
+                Log.d("PHONE_APP", "📡 Broadcast recibido: $heartRate BPM")
+            }
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         Log.d("PHONE_APP", "📱 Iniciando MainActivity")
 
-        // Inicializar la capacidad
-        val capabilitySetup = CapabilitySetup(this)
-        capabilitySetup.setupCapability()
+        try {
+            // Registrar receiver para broadcasts
+            val filter = IntentFilter("HEART_RATE_UPDATE")
+
+            // Registrar el receiver con el flag correcto para diferentes versiones de Android
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                // Android 13+ (API 33+) requiere RECEIVER_EXPORTED o RECEIVER_NOT_EXPORTED
+                registerReceiver(heartRateReceiver, filter, Context.RECEIVER_EXPORTED)
+            } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                // Android 8.0+ (API 26+) - método normal
+                registerReceiver(heartRateReceiver, filter)
+            } else {
+                // Versiones anteriores
+                registerReceiver(heartRateReceiver, filter)
+            }
+
+            isReceiverRegistered = true
+            Log.d("PHONE_APP", "✅ Receiver registrado correctamente")
+
+            capabilitySetup = CapabilitySetup(this)
+            capabilitySetup.setupCapability()
+
+            // Debug: probar todos los endpoints
+            val apiService = ApiService()
+            apiService.testAllEndpoints()
+
+        } catch (e: Exception) {
+            Log.e("PHONE_APP", "❌ Error en onCreate: ${e.message}")
+        }
 
         setContent {
             MaterialTheme {
@@ -40,18 +84,36 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        try {
+            if (isReceiverRegistered) {
+                unregisterReceiver(heartRateReceiver)
+                Log.d("PHONE_APP", "✅ Receiver desregistrado")
+            }
+        } catch (e: IllegalArgumentException) {
+            Log.w("PHONE_APP", "Receiver no estaba registrado")
+        }
+    }
 }
 
 @Composable
 fun HeartRateApp(capabilitySetup: CapabilitySetup) {
-    val heartRate = remember { mutableStateOf(0f) }
-    val connectionStatus = remember { mutableStateOf("Verificando conexión...") }
+    var heartRate by remember { mutableStateOf(0f) }
+    var connectionStatus by remember { mutableStateOf("Verificando conexión...") }
 
     // Verificar conexión periódicamente
     LaunchedEffect(Unit) {
         while (true) {
-            capabilitySetup.checkConnection { isConnected ->
-                connectionStatus.value = if (isConnected) "✅ Conectado al reloj" else "❌ Desconectado"
+            try {
+                capabilitySetup.checkConnection { isConnected ->
+                    connectionStatus = if (isConnected) "✅ Conectado al reloj" else "❌ Desconectado"
+                    Log.d("PHONE_APP", "📡 Estado conexión: $isConnected")
+                }
+            } catch (e: Exception) {
+                Log.e("PHONE_APP", "❌ Error verificando conexión: ${e.message}")
+                connectionStatus = "❌ Error de conexión"
             }
             delay(3000)
         }
@@ -74,15 +136,15 @@ fun HeartRateApp(capabilitySetup: CapabilitySetup) {
 
         // Estado de conexión
         Text(
-            text = connectionStatus.value,
+            text = connectionStatus,
             fontSize = 16.sp,
             textAlign = TextAlign.Center,
             modifier = Modifier.padding(bottom = 16.dp)
         )
 
-        if (heartRate.value > 0) {
+        if (heartRate > 0) {
             Text(
-                text = "${heartRate.value.toInt()} BPM",
+                text = "${heartRate.toInt()} BPM",
                 fontSize = 32.sp,
                 modifier = Modifier.padding(vertical = 16.dp)
             )
